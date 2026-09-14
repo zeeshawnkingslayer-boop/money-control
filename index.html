@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Money Control</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--blue:#2563eb;--nav:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+button,input,select{font:inherit}button{border:0;cursor:pointer}.app{max-width:520px;margin:auto;padding-bottom:88px}
+header{background:#111827;color:#fff;padding:22px 18px 20px;border-radius:0 0 24px 24px}
+h1{font-size:23px;margin:0 0 4px}.sub{color:#cbd5e1;font-size:13px}
+.monthbar{display:flex;align-items:center;justify-content:space-between;margin-top:18px}.monthbar button{background:#273244;color:white;width:38px;height:38px;border-radius:12px;font-size:20px}
+.monthname{font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px;box-shadow:0 2px 8px #00000008}
+.label{color:var(--muted);font-size:12px}.value{font-size:23px;font-weight:800;margin-top:4px;letter-spacing:-.4px}.smallvalue{font-size:18px}
+.hero{margin:0 14px;padding:18px}.hero .value{font-size:31px}.bar{height:9px;background:#edf0f3;border-radius:20px;overflow:hidden;margin-top:10px}.fill{height:100%;background:var(--green);border-radius:20px}.warn .fill{background:var(--yellow)}.danger .fill{background:var(--red)}
+.section{padding:0 14px;margin-top:5px}.section h2{font-size:17px;margin:12px 2px 9px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}.muted{color:var(--muted)}
+.bigbtn{width:100%;padding:14px;border-radius:15px;background:#111827;color:white;font-weight:750;margin-top:9px}
+.quick{display:flex;gap:8px;overflow:auto;padding-bottom:4px}.quick button{white-space:nowrap;background:#fff;border:1px solid var(--line);padding:11px 13px;border-radius:13px}
+.tx{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.tx:last-child{border-bottom:0}
+.txname{font-weight:650}.txmeta{font-size:12px;color:var(--muted);margin-top:2px}.txamt{font-weight:800}.expense{color:var(--red)}
+nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);background:var(--nav);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:9px 6px calc(9px + env(safe-area-inset-bottom));z-index:5}
+nav button{background:none;color:var(--muted);padding:7px 11px;border-radius:12px;font-size:12px}nav button.active{background:#eef2ff;color:var(--blue);font-weight:700}
+.modal{position:fixed;inset:0;background:#0008;display:none;align-items:flex-end;z-index:10}.modal.show{display:flex}.sheet{background:#fff;width:min(520px,100%);margin:auto;border-radius:24px 24px 0 0;padding:18px;max-height:92vh;overflow:auto}
+input,select{width:100%;padding:13px;border:1px solid var(--line);border-radius:13px;background:#fff;margin:5px 0 12px}label{font-size:12px;color:var(--muted)}
+.actions{display:flex;gap:9px}.actions button{flex:1;padding:13px;border-radius:13px;font-weight:700}.primary{background:#111827;color:#fff}.secondary{background:#eef0f3}
+.goal{margin-bottom:10px}.goal .bar{margin:7px 0}.goalrow{display:flex;justify-content:space-between;font-size:13px}
+.toast{position:fixed;bottom:82px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:11px 15px;border-radius:12px;display:none;z-index:20}.toast.show{display:block}
+.hide{display:none!important}.dangertext{color:var(--red)}.green{color:var(--green)}
+@media(min-width:520px){body{padding-bottom:0}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>Money Control</h1><div class="sub">Save first · spend the rest freely</div>
+  <div class="monthbar"><button onclick="shiftMonth(-1)">‹</button><div class="monthname" id="monthName"></div><button onclick="shiftMonth(1)">›</button></div>
+</header>
+
+<main id="dashboard">
+  <div class="grid">
+    <div class="card"><div class="label">Monthly income</div><div class="value" id="income"></div></div>
+    <div class="card"><div class="label">Protected savings</div><div class="value green" id="protected"></div></div>
+    <div class="card"><div class="label">Total spent</div><div class="value" id="spent"></div></div>
+    <div class="card"><div class="label">Projected savings</div><div class="value" id="projected"></div></div>
+  </div>
+  <div class="card hero" id="foodCard">
+    <div class="row"><div><div class="label">Food / Fun remaining</div><div class="value" id="foodRemain"></div></div><div style="text-align:right"><div class="label">Safe to spend today</div><div class="value smallvalue" id="daily"></div></div></div>
+    <div class="bar"><div class="fill" id="foodFill"></div></div>
+    <div class="row" style="margin-top:8px"><span class="muted" id="foodSpent"></span><span class="muted" id="foodPct"></span></div>
+  </div>
+  <div class="grid">
+    <div class="card"><div class="label">Current available</div><div class="value" id="available"></div></div>
+    <div class="card"><div class="label">Savings rate</div><div class="value" id="saveRate"></div></div>
+  </div>
+  <div class="section"><h2>Quick add</h2><div class="quick">
+    <button onclick="quick('Tea',100)">☕ Tea<br><b>Rs 100</b></button>
+    <button onclick="quick('Cake',300)">🍰 Cake<br><b>Rs 300</b></button>
+    <button onclick="quick('Lassi',200)">🥛 Lassi<br><b>Rs 200</b></button>
+    <button onclick="quick('Eggs',250)">🥚 Eggs<br><b>Rs 250</b></button>
+  </div><button class="bigbtn" onclick="openExpense()">＋ Add expense</button></div>
+  <div class="section"><h2>Recent expenses</h2><div class="card" id="recent"></div></div>
+  <div class="section"><h2>Savings goals</h2><div class="card" id="goals"></div><button class="bigbtn" onclick="openGoal()">＋ Add savings goal</button></div>
+  <div class="section"><h2>Insight</h2><div class="card" id="insight"></div></div>
+</main>
+
+<main id="history" class="hide">
+  <div class="section" style="padding-top:14px"><h2>Monthly history</h2><div id="historyList"></div></div>
+</main>
+
+<main id="settings" class="hide">
+  <div class="section" style="padding-top:14px"><h2>Settings & backup</h2>
+    <div class="card">
+      <label>Monthly salary</label><input id="setIncome" type="number" inputmode="numeric">
+      <label>Protected savings target</label><input id="setSavings" type="number" inputmode="numeric">
+      <label>Food/Fun budget</label><input id="setFood" type="number" inputmode="numeric">
+      <button class="bigbtn" onclick="saveSettings()">Save settings</button>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <button class="bigbtn" onclick="exportData()">Export backup</button>
+      <button class="bigbtn" onclick="document.getElementById('importFile').click()">Import backup</button>
+      <input id="importFile" type="file" accept=".json" class="hide" onchange="importData(event)">
+      <button class="bigbtn" style="background:#fee2e2;color:#991b1b" onclick="resetMonth()">Reset current month</button>
+    </div>
+  </div>
+</main>
+</div>
+
+<nav><button class="active" onclick="tab('dashboard',this)">⌂<br>Dashboard</button><button onclick="tab('history',this)">▣<br>History</button><button onclick="tab('settings',this)">⚙<br>Settings</button></nav>
+
+<div class="modal" id="expenseModal"><div class="sheet">
+<h2>Add expense</h2>
+<label>Amount (Rs)</label><input id="eAmount" type="number" inputmode="decimal" placeholder="e.g. 200">
+<label>Category</label><select id="eCat"><option>Food/Fun</option><option>Home</option><option>Mess</option><option>Network</option><option>Surf</option><option>Face wash</option><option>Bubble gum</option><option>Creatine</option><option>Transport</option><option>Shopping</option><option>Family</option><option>Other</option></select>
+<label>Description (optional)</label><input id="eDesc" placeholder="What was it?">
+<label>Date</label><input id="eDate" type="date">
+<div class="actions"><button class="secondary" onclick="closeModals()">Cancel</button><button class="primary" onclick="saveExpense()">Save expense</button></div>
+</div></div>
+
+<div class="modal" id="goalModal"><div class="sheet">
+<h2>Savings goal</h2><label>Name</label><input id="gName" placeholder="Emergency fund">
+<label>Target (Rs)</label><input id="gTarget" type="number" inputmode="numeric">
+<label>Current saved (Rs)</label><input id="gSaved" type="number" inputmode="numeric" value="0">
+<div class="actions"><button class="secondary" onclick="closeModals()">Cancel</button><button class="primary" onclick="saveGoal()">Save goal</button></div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY='money_control_v1';
+const defaults={income:58000,protected:12000,food:9080,fixed:[
+['Home',30000],['Mess',1000],['Network',2000],['Surf',620],['Face wash',500],['Bubble gum',300],['Creatine',2500]
+],months:{},goals:[]};
+let data=JSON.parse(localStorage.getItem(KEY)||'null')||defaults;
+let viewDate=new Date(); viewDate.setDate(1);
+function ym(d=viewDate){return d.toISOString().slice(0,7)}
+function fmt(n){return 'Rs '+Math.round(n).toLocaleString('en-PK')}
+function monthLabel(){return viewDate.toLocaleDateString('en-US',{month:'long',year:'numeric'})}
+function getMonth(k=ym()){if(!data.months[k])data.months[k]={income:data.income,protected:data.protected,food:data.food,expenses:[]};return data.months[k]}
+function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+function daysLeft(){let y=viewDate.getFullYear(),m=viewDate.getMonth();let last=new Date(y,m+1,0).getDate();let today=new Date();if(ym(today)!==ym())return last;return Math.max(1,last-today.getDate()+1)}
+function calc(){
+ let m=getMonth(), ex=m.expenses||[], spent=ex.reduce((s,e)=>s+Number(e.amount||0),0), food=ex.filter(e=>e.category==='Food/Fun').reduce((s,e)=>s+Number(e.amount||0),0);
+ let remain=m.food-food, extra=Math.max(0,remain), totalSavings=m.protected+extra, available=m.income-spent-m.protected;
+ let daily=Math.max(0,remain/daysLeft()), pct=m.food?food/m.food*100:0;
+ return {m,ex,spent,food,remain,extra,totalSavings,available,daily,pct};
+}
+function render(){
+ document.getElementById('monthName').textContent=monthLabel();let c=calc(),m=c.m;
+ income.textContent=fmt(m.income);protected.textContent=fmt(m.protected);spent.textContent=fmt(c.spent);projected.textContent=fmt(c.totalSavings);
+ foodRemain.textContent=fmt(c.remain);foodSpent.textContent=fmt(c.food)+' spent of '+fmt(m.food);foodPct.textContent=Math.round(c.pct)+'% used';daily.textContent=fmt(c.daily);
+ available.textContent=fmt(c.available);saveRate.textContent=(m.income?Math.round(c.totalSavings/m.income*100):0)+'%';
+ foodFill.style.width=Math.min(100,Math.max(0,c.pct))+'%';foodCard.className='card hero '+(c.pct>=100?'danger':c.pct>=75?'warn':'');
+ recent.innerHTML=c.ex.length?c.ex.slice().sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).slice(0,8).map(e=>`<div class="tx"><div><div class="txname">${esc(e.description||e.category)}</div><div class="txmeta">${esc(e.category)} · ${e.date}</div></div><div><span class="txamt expense">−${fmt(e.amount).replace('Rs ','Rs ')}</span><button onclick="editExpense(${e.id})" style="margin-left:8px;background:none">✎</button><button onclick="deleteExpense(${e.id})" style="background:none">×</button></div></div>`).join(''):'<div class="muted">No expenses yet. Your budget is still untouched.</div>';
+ goals.innerHTML=data.goals.length?data.goals.map((g,i)=>{let p=g.target?Math.min(100,g.saved/g.target*100):0;return `<div class="goal"><div class="goalrow"><b>${esc(g.name)}</b><span>${fmt(g.saved)} / ${fmt(g.target)}</span></div><div class="bar"><div class="fill" style="width:${p}%"></div></div><div class="goalrow"><span class="muted">${Math.round(p)}% complete · ${fmt(Math.max(0,g.target-g.saved))} remaining</span><button onclick="deleteGoal(${i})">×</button></div></div>`}).join(''):'<div class="muted">Add a goal when you know what you want your savings to achieve.</div>';
+ let prev=new Date(viewDate);prev.setMonth(prev.getMonth()-1);let pm=data.months[prev.toISOString().slice(0,7)];
+ let msg=c.ex.length?`You have spent ${fmt(c.spent)} this month. ${c.remain>=0?fmt(c.remain)+' of Food/Fun remains.':'Food/Fun is '+fmt(-c.remain)+' over budget — the allowance has been recalculated.'}`:'Zero spending recorded this month. Every unspent rupee remains available and becomes extra savings at month-end.';
+ if(pm){let pc=monthCalc(pm);let diff=c.totalSavings-pc.totalSavings;msg+=` ${diff>=0?'Savings are':'Savings are'} ${fmt(Math.abs(diff))} ${diff>=0?'higher':'lower'} than last month.`}
+ insight.textContent=msg;
+ setIncome.value=m.income;setSavings.value=m.protected;setFood.value=m.food;
+ renderHistory();
+}
+function monthCalc(m){let ex=m.expenses||[],spent=ex.reduce((s,e)=>s+Number(e.amount||0),0),food=ex.filter(e=>e.category==='Food/Fun').reduce((s,e)=>s+Number(e.amount||0),0);return {...m,spent,food,totalSavings:m.protected+Math.max(0,m.food-food)}}
+function esc(s){return String(s).replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]))}
+function openExpense(name,amount){expenseModal.classList.add('show');eDate.value=new Date().toISOString().slice(0,10);if(amount){eAmount.value=amount;eDesc.value=name;eCat.value='Food/Fun'}else{eAmount.value='';eDesc.value=''};delete expenseModal.dataset.edit}
+function quick(n,a){openExpense(n,a)}
+function closeModals(){document.querySelectorAll('.modal').forEach(x=>x.classList.remove('show'))}
+function saveExpense(){
+ let amount=Number(eAmount.value);if(!(amount>0)){toast('Enter a valid amount');return}
+ let m=getMonth(), edit=expenseModal.dataset.edit, obj={id:edit?Number(edit):Date.now(),amount,category:eCat.value,description:eDesc.value.trim(),date:eDate.value||new Date().toISOString().slice(0,10)};
+ if(edit){let i=m.expenses.findIndex(x=>x.id===Number(edit));if(i>=0)m.expenses[i]=obj}else m.expenses.push(obj);save();closeModals();render();toast('Expense saved');
+}
+function editExpense(id){let e=getMonth().expenses.find(x=>x.id===id);if(!e)return;openExpense();eAmount.value=e.amount;eCat.value=e.category;eDesc.value=e.description;eDate.value=e.date;expenseModal.dataset.edit=id}
+function deleteExpense(id){if(confirm('Delete this expense?')){let m=getMonth();m.expenses=m.expenses.filter(e=>e.id!==id);save();render();toast('Expense deleted')}}
+function openGoal(){goalModal.classList.add('show');gName.value='';gTarget.value='';gSaved.value=0}
+function saveGoal(){let name=gName.value.trim(),target=Number(gTarget.value),saved=Number(gSaved.value)||0;if(!name||target<=0){toast('Enter a goal name and target');return}data.goals.push({name,target,saved:Math.max(0,saved)});save();closeModals();render();toast('Goal added')}
+function deleteGoal(i){if(confirm('Delete this goal?')){data.goals.splice(i,1);save();render()}}
+function shiftMonth(n){viewDate.setMonth(viewDate.getMonth()+n);render()}
+function tab(id,btn){['dashboard','history','settings'].forEach(x=>document.getElementById(x).classList.toggle('hide',x!==id));document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active')}
+function renderHistory(){let keys=Object.keys(data.months).sort().reverse();historyList.innerHTML=keys.length?keys.map(k=>{let m=data.months[k],c=monthCalc(m);return `<div class="card" style="margin-bottom:10px"><div class="row"><b>${new Date(k+'-01T00:00:00').toLocaleDateString('en-US',{month:'long',year:'numeric'})}</b><b class="green">${fmt(c.totalSavings)} saved</b></div><div class="txmeta" style="margin-top:8px">Income ${fmt(m.income)} · Expenses ${fmt(c.spent)} · Food/Fun ${fmt(c.food)} · Protected ${fmt(m.protected)} · Extra ${fmt(Math.max(0,m.food-c.food))}</div></div>`}).join(''):'<div class="card muted">Your completed months will appear here.</div>'}
+function saveSettings(){let m=getMonth();let inc=Number(setIncome.value),sav=Number(setSavings.value),foodv=Number(setFood.value);if(inc<0||sav<0||foodv<0){toast('Values cannot be negative');return}m.income=inc;m.protected=sav;m.food=foodv;data.income=inc;data.protected=sav;data.food=foodv;save();render();toast('Budget updated')}
+function exportData(){let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='money-control-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function importData(ev){let f=ev.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.months||!x.goals)throw 0;data=x;save();render();toast('Backup imported')}catch{toast('Invalid backup file')}};r.readAsText(f)}
+function resetMonth(){if(confirm('Reset all expenses for this month? This cannot be undone unless you have a backup.')){getMonth().expenses=[];save();render();toast('Month reset')}}
+function toast(s){let t=document.getElementById('toast');t.textContent=s;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
+render();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
